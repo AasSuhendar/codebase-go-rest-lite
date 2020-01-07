@@ -1,11 +1,11 @@
-package service
+package router
 
 import (
 	"encoding/json"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi"
+	"github.com/dimaskiddo/codebase-go-rest-lite/hlp"
 )
 
 // ResSuccess Struct
@@ -21,100 +21,6 @@ type ResError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Error   string `json:"error"`
-}
-
-// Router CORS Configuration Struct
-type routerCORSConfig struct {
-	Origins string
-	Methods string
-	Headers string
-}
-
-// Router CORS Configuration Variable
-var routerCORSCfg routerCORSConfig
-
-// RouterBasePath Variable
-var RouterBasePath string
-
-// Router Variable
-var Router *chi.Mux
-
-// routerInit Function
-func routerInit() {
-	// Initialize Router
-	Router = chi.NewRouter()
-
-	// Set Router Entity Size
-	Router.Use(routerEntitySize)
-
-	// Set Router CORS
-	Router.Use(routerCORS)
-
-	// Set Router Logging
-	Router.Use(routerLogs)
-
-	// Set Handler for /favicon.ico
-	Router.Get("/favicon.ico", handlerFavIcon)
-
-	// Set Handler for Not Found
-	Router.NotFound(handlerNotFound)
-
-	// Set Handler for Method Not Allowed
-	Router.MethodNotAllowed(handlerMethodNotAllowed)
-}
-
-// RouterEntitySize Function
-func routerEntitySize(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate Entity Size
-		r.Body = http.MaxBytesReader(w, r.Body, Config.GetInt64("SERVER_UPLOAD_LIMIT"))
-		next.ServeHTTP(w, r)
-	})
-}
-
-// RouterCORS Function
-func routerCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Add Header for CORS
-		r.Header.Set("Access-Control-Allow-Origin", routerCORSCfg.Origins)
-		r.Header.Set("Access-Control-Allow-Methods", routerCORSCfg.Methods)
-		r.Header.Set("Access-Control-Allow-Headers", routerCORSCfg.Headers)
-		next.ServeHTTP(w, r)
-	})
-}
-
-// routerLogs Function
-func routerLogs(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Log HTTP Access if Not Acessing /favicon.ico
-		if r.RequestURI != "/favicon.ico" {
-			Log("info", "http-access", "access method "+r.Method+" at URI "+r.RequestURI)
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// HandlerNotFound Function
-func handlerNotFound(w http.ResponseWriter, r *http.Request) {
-	Log("warn", "http-access", "not found method "+r.Method+" at URI "+r.RequestURI)
-	ResponseNotFound(w, "not found method "+r.Method+" at URI "+r.RequestURI)
-}
-
-// HandlerMethodNotAllowed Function
-func handlerMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
-	Log("warn", "http-access", "not allowed method "+r.Method+" at URI "+r.RequestURI)
-	ResponseMethodNotAllowed(w, "not allowed method "+r.Method+" at URI "+r.RequestURI)
-}
-
-// HandlerFavIcon Function
-func handlerFavIcon(w http.ResponseWriter, r *http.Request) {
-	ResponseNoContent(w)
-}
-
-// HealthCheck Function
-func HealthCheck(w http.ResponseWriter) {
-	// Return Success
-	ResponseSuccess(w, "")
 }
 
 // ResponseWrite Function
@@ -230,7 +136,7 @@ func ResponseBadRequest(w http.ResponseWriter, message string) {
 	response.Error = message
 
 	// Logging Error
-	Log("error", "http-access", strings.ToLower(message))
+	hlp.LogPrintln(hlp.LogLevelError, "http-access", strings.ToLower(message))
 
 	// Set Response Data to HTTP
 	ResponseWrite(w, response.Code, response)
@@ -252,7 +158,7 @@ func ResponseInternalError(w http.ResponseWriter, message string) {
 	response.Error = message
 
 	// Logging Error
-	Log("error", "http-access", strings.ToLower(message))
+	hlp.LogPrintln(hlp.LogLevelError, "http-access", strings.ToLower(message))
 
 	// Set Response Data to HTTP
 	ResponseWrite(w, response.Code, response)
@@ -266,7 +172,7 @@ func ResponseUnauthorized(w http.ResponseWriter) {
 	response.Status = false
 	response.Code = http.StatusUnauthorized
 	response.Message = "Unauthorized"
-	response.Error = "Unaothorized"
+	response.Error = "Unauthorized"
 
 	// Set Response Data to HTTP
 	ResponseWrite(w, response.Code, response)
